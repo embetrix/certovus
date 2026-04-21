@@ -1,6 +1,7 @@
 # Certovus
 
 [![CI](https://github.com/embetrix/certovus/actions/workflows/ci.yml/badge.svg)](https://github.com/embetrix/certovus/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 Let's Encrypt certificate broker for embedded devices. Devices send CSRs over
 HTTPS; Certovus handles ACME DNS-01 challenges on their behalf via Cloudflare.
