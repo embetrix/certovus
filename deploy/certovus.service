@@ -1,0 +1,34 @@
+[Unit]
+Description=Certovus certificate broker
+After=network.target
+
+[Service]
+Type=notify
+User=certovus
+Group=certovus
+WorkingDirectory=/opt/certovus
+RuntimeDirectory=certovus
+RuntimeDirectoryMode=0750
+
+EnvironmentFile=/etc/certovus/env
+ExecStart=/opt/certovus/venv/bin/gunicorn \
+    --bind 127.0.0.1:8080 \
+    --workers 4 \
+    --worker-tmp-dir /run/certovus \
+    --access-logfile - \
+    --error-logfile - \
+    broker.wsgi:app
+
+Restart=on-failure
+RestartSec=5s
+
+# Harden
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/data/certovus
+ProtectHome=yes
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
