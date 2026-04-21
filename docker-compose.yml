@@ -23,9 +23,17 @@ services:
     depends_on:
       - pebble
       - challtestsrv
-    # Default entrypoint runs unit tests.
-    # Deliverable 9 (Flask app) will switch this to gunicorn.
-    command: ["pytest", "tests/unit/", "-v"]
+    command: ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:8080", "broker.wsgi:app"]
+
+  # ── nginx (dev reverse proxy) ───────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - broker
 
   # ── pebble (ACME test server) ────────────────────────────────────────────────
   pebble:

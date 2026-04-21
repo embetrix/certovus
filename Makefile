@@ -26,7 +26,7 @@ docker-build:
 
 # Runs the full test suite inside the broker container (same Python + deps as prod).
 docker-test:
-	docker compose run --rm broker pytest tests/unit/ -v
+	docker compose run --rm --entrypoint pytest broker tests/unit/ -v
 
 # ── staging / prod (run on VPS under systemd, not locally) ────────────────────
 
@@ -37,7 +37,7 @@ staging:
 	    --workers 4 \
 	    --access-logfile - \
 	    --error-logfile - \
-	    "broker.app:create_app()"
+	    broker.wsgi:app
 
 prod:
 	CERTOVUS_ENV=production \
@@ -46,7 +46,7 @@ prod:
 	    --workers 4 \
 	    --access-logfile - \
 	    --error-logfile - \
-	    "broker.app:create_app()"
+	    broker.wsgi:app
 
 # ── code quality ──────────────────────────────────────────────────────────────
 
