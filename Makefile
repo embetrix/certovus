@@ -1,15 +1,15 @@
-.PHONY: dev down test unit e2e staging prod lint format clean
+.PHONY: dev down test unit e2e docker-build docker-test staging prod lint format clean
 
-# ── local dev stack (pebble + challtestsrv + nginx + broker in Docker) ────────
+# ── local dev stack (pebble + challtestsrv + broker in Docker) ───────────────
 
 dev:
-	docker-compose up --build -d
-	@echo "Stack is up. Logs: docker-compose logs -f  |  Stop: make down"
+	docker compose up --build -d
+	@echo "Stack is up. Logs: docker compose logs -f  |  Stop: make down"
 
 down:
-	docker-compose down -v
+	docker compose down -v
 
-# ── test targets ──────────────────────────────────────────────────────────────
+# ── test targets (run locally against host Python) ────────────────────────────
 
 test: unit e2e
 
@@ -18,6 +18,15 @@ unit:
 
 e2e:
 	pytest tests/e2e/ -v; s=$$?; [ $$s -eq 5 ] && exit 0 || exit $$s
+
+# ── Docker test targets ───────────────────────────────────────────────────────
+
+docker-build:
+	docker compose build broker
+
+# Runs the full test suite inside the broker container (same Python + deps as prod).
+docker-test:
+	docker compose run --rm broker pytest tests/unit/ -v
 
 # ── staging / prod (run on VPS under systemd, not locally) ────────────────────
 
