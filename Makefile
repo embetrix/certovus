@@ -24,9 +24,13 @@ e2e:
 docker-build:
 	docker compose build broker
 
-# Runs the full test suite inside the broker container (same Python + deps as prod).
+# Runs the unit test suite inside the broker container.
 docker-test:
 	docker compose run --rm --entrypoint pytest broker tests/unit/ -v
+
+# Runs the e2e test suite inside Docker (needs pebble + challtestsrv).
+e2e:
+	docker compose run --rm --entrypoint pytest broker tests/e2e/ -v; s=$$?; [ $$s -eq 5 ] && exit 0 || exit $$s
 
 # ── staging / prod (run on VPS under systemd, not locally) ────────────────────
 

@@ -1,7 +1,7 @@
 # ── Local dev stack ───────────────────────────────────────────────────────────
 # Bring up with: make dev
 # Run unit tests: make docker-test
-# Shell into broker: docker-compose run --rm broker bash
+# Run e2e tests:  make e2e
 
 services:
 
@@ -14,15 +14,12 @@ services:
       CERTOVUS_ENV: dev
       BROKER_DB_PATH: /data/certovus.db
       ACME_ACCOUNT_KEY_PATH: /data/acme_account.key
-      DEVICE_CA_CERT_PATH: /data/device_ca.crt
       PEBBLE_URL: https://pebble:14000/dir
-      CHALLTESTSRV_URL: http://challtestsrv:8055
-      # pebble uses a self-signed CA; point requests at it
+      # pebble uses a self-signed CA; trust it for outbound ACME requests
       REQUESTS_CA_BUNDLE: /app/docker/pebble-ca.pem
       LOG_LEVEL: DEBUG
     depends_on:
       - pebble
-      - challtestsrv
     command: ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:8080", "broker.wsgi:app"]
 
   # ── nginx (dev reverse proxy) ───────────────────────────────────────────────
@@ -36,24 +33,17 @@ services:
       - broker
 
   # ── pebble (ACME test server) ────────────────────────────────────────────────
+  # PEBBLE_VA_ALWAYS_VALID=1: skip real DNS lookups — TXT records don't need to
+  # exist.  NoopDNS in e2e tests satisfies the DNSProvider interface without
+  # calling any external service.
   pebble:
     image: ghcr.io/letsencrypt/pebble:latest
-    command: pebble -config /test/config/pebble-config.json -dnsserver challtestsrv:8053
+    command: ["-config", "/test/config/pebble-config.json"]
     environment:
-      # Skip real DNS validation so unit/integration tests don't need challtestsrv
-      # DNS wired up. Set to 0 for full end-to-end DNS-01 flow.
       PEBBLE_VA_ALWAYS_VALID: "1"
     ports:
       - "14000:14000"   # ACME directory
-      - "15000:15000"   # management API (pebble test helper)
-
-  # ── challtestsrv (mock DNS + HTTP-01 + TLS-ALPN-01) ─────────────────────────
-  challtestsrv:
-    image: ghcr.io/letsencrypt/pebble:latest
-    command: pebble-challtestsrv -defaultIPv4 broker
-    ports:
-      - "8055:8055"     # management HTTP API  (MockDNS POSTs here)
-      - "8053:8053/udp" # mock DNS resolver    (pebble queries here)
+      - "15000:15000"   # management API
 
 volumes:
   broker-data:

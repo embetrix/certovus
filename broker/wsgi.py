@@ -40,8 +40,12 @@ def _int_env(key: str, default: int) -> int:
 def _build_dns_provider():
     env = _env("CERTOVUS_ENV", "dev")
     if env == "dev":
-        from broker.dns.mock import MockDNS
-        return MockDNS(challtestsrv_url=_env("CHALLTESTSRV_URL", "http://challtestsrv:8055"))
+        challtestsrv_url = os.environ.get("CHALLTESTSRV_URL")
+        if challtestsrv_url:
+            from broker.dns.mock import MockDNS
+            return MockDNS(challtestsrv_url=challtestsrv_url)
+        from broker.dns.noop import NoopDNS
+        return NoopDNS()
     from broker.dns.cloudflare import CloudflareDNS
     return CloudflareDNS(
         api_token=_env("CLOUDFLARE_API_TOKEN", ""),

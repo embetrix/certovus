@@ -94,7 +94,7 @@ class ACMEClient:
         try:
             _wait_all_propagation(challbs, dns_provider)
             _answer_all(challbs, acme)
-            deadline = datetime.now(timezone.utc) + timedelta(seconds=self._order_timeout)
+            deadline = datetime.now() + timedelta(seconds=self._order_timeout)
             try:
                 order = acme.poll_and_finalize(order, deadline=deadline)
             except acme_errors.Error as exc:
@@ -202,10 +202,13 @@ def _collect_dns01_challenges(
 ) -> list[tuple[str, object, object, str]]:
     """Return list of (domain, challenge_body, response, txt_value) for all authzrs.
 
-    Raises ACMEError if any authorization has no DNS-01 challenge.
+    Skips authorizations that are already valid (ACME server may reuse them).
+    Raises ACMEError if any pending authorization has no DNS-01 challenge.
     """
     result = []
     for authzr in order.authorizations:
+        if authzr.body.status == messages.STATUS_VALID:
+            continue
         domain = authzr.body.identifier.value
         dns01 = next(
             (c for c in authzr.body.challenges if isinstance(c.chall, challenges.DNS01)),
