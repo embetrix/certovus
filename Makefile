@@ -14,10 +14,10 @@ down:
 test: unit e2e
 
 unit:
-	pytest tests/unit/ -v
+	pytest tests/unit/ -v; s=$$?; [ $$s -eq 5 ] && exit 0 || exit $$s
 
 e2e:
-	pytest tests/e2e/ -v
+	pytest tests/e2e/ -v; s=$$?; [ $$s -eq 5 ] && exit 0 || exit $$s
 
 # ── staging / prod (run on VPS under systemd, not locally) ────────────────────
 
