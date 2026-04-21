@@ -25,10 +25,12 @@ htmlcov/
 .env
 *.key
 *.p8
-# Runtime-generated certs/keys (never commit private key material)
+# Runtime-generated certs/keys/CSRs (never commit private key material)
 acme_account.key
 device_ca.key
 client.key
+*.csr
+*.crt
 
 # ── Databases ─────────────────────────────────────────────────────────────────
 *.db
