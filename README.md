@@ -69,17 +69,32 @@ the device; the broker only checks that the SANs are in the device's allowlist.
 
 ## Provisioning a new device
 
+In production, run the CLI on the VPS where the DB lives.
+In dev, use `docker compose exec` to reach the container's DB:
+
 ```bash
-# On the admin workstation (requires certovus CLI in PATH):
-certovus provision \
-    <cn> \
-    --hostnames "device.example.com" \
+# Production / staging
+certovus --db /data/certovus/certovus.db provision \
+    --cn "device.example.com" \
+    --hostname "device.example.com" \
     --label "living room sensor"
 
-# Output:
-# Provisioned device fingerprint: abc123...
-# Token (shown once — store securely):
-# 7f3a...
+# Dev (Docker stack running via `make dev`)
+docker compose exec broker certovus provision \
+    --cn "device.example.com" \
+    --hostname "device.example.com" \
+    --label "living room sensor"
+```
+
+Output:
+```
+Provisioned:  device.example.com
+Fingerprint:  c565416d...
+Hostnames:    device.example.com
+
+Bearer token: a187f0cf...
+
+WARNING: Save this token — it will not be shown again.
 ```
 
 Flash the token into the device firmware's secure storage. The CN and
@@ -92,9 +107,70 @@ certovus devices        # active only
 certovus devices --all  # including revoked
 ```
 
+For an interactive admin shell in dev:
+
+```bash
+docker compose exec broker bash
+# BROKER_DB_PATH is already set in the container — no --db flag needed
+certovus devices
+certovus audit --limit 20
+```
+
 ---
 
-## Running a device
+## Testing locally with curl
+
+Full end-to-end flow against the dev stack (`make dev` must be running):
+
+**1. Provision a device** (see above — copy the printed token)
+
+**2. Generate a private key and CSR**
+
+```bash
+openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+    -keyout device.key \
+    -out device.csr \
+    -subj "/CN=device.example.com" \
+    -addext "subjectAltName=DNS:device.example.com"
+```
+
+**3. Request a certificate**
+
+```bash
+TOKEN="<paste token here>"
+
+curl -s -X POST http://localhost:8000/sign \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg csr "$(cat device.csr)" '{csr: $csr}')" \
+    | jq -r .cert > device.crt
+```
+
+Without `jq`:
+
+```bash
+curl -s -X POST http://localhost:8000/sign \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    --data-binary @- <<EOF
+$(python3 -c "import json; print(json.dumps({'csr': open('device.csr').read()}))")
+EOF
+```
+
+**4. Inspect the issued certificate**
+
+```bash
+openssl x509 -in device.crt -noout -text \
+    | grep -E "Subject:|DNS:|Not (Before|After)"
+```
+
+Pebble (the dev ACME server) issues short-lived certs (~6 days) — that is
+expected in dev. A second request with the same CSR within 30 days is served
+instantly from the cache without a new ACME round-trip.
+
+---
+
+## Running a device (production)
 
 The device sends a PKCS#10 CSR (PEM) and receives a signed PEM chain:
 
@@ -102,8 +178,8 @@ The device sends a PKCS#10 CSR (PEM) and receives a signed PEM chain:
 curl -X POST https://broker.example.com/sign \
      -H "Authorization: Bearer <token>" \
      -H "Content-Type: application/json" \
-     -d '{"csr": "<PEM>"}' \
-| jq -r .cert > device.crt
+     -d "$(jq -n --arg csr "$(cat device.csr)" '{csr: $csr}')" \
+     | jq -r .cert > device.crt
 ```
 
 Certificates are valid for ~90 days (Let's Encrypt default). The broker
