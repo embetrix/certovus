@@ -10,7 +10,6 @@ from cryptography.x509.oid import NameOID
 from broker.csr import ParsedCSR, parse_csr, validate_hostnames
 from broker.errors import CSRError, HostnameDeniedError
 
-
 # ── CSR generation helpers ────────────────────────────────────────────────────
 
 

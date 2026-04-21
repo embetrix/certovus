@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
+from datetime import UTC
 
 import pytest
 from cryptography import x509 as crypto_x509
@@ -149,7 +150,7 @@ class TestFullIssuance:
         assert "-----BEGIN CERTIFICATE-----" in resp.get_json()["cert"]
 
     def test_issued_cert_covers_device_domain(self, issued):
-        from cryptography.x509 import load_pem_x509_certificate, DNSName, SubjectAlternativeName
+        from cryptography.x509 import DNSName, SubjectAlternativeName, load_pem_x509_certificate
         resp, _ = issued
         cert = load_pem_x509_certificate(resp.get_json()["cert"].encode())
         san = cert.extensions.get_extension_for_class(SubjectAlternativeName)
@@ -178,13 +179,14 @@ class TestCacheHit:
 
     def test_cache_hit_when_fresh_cert_in_db(self, client, token, _db, device_fp):
         """Seed a long-lived cert in DB; second request must return it from cache."""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
+
         from broker.csr import parse_csr
         from broker.db import CertsDB, IssuedCert
 
         csr, _ = _make_csr(DEVICE_CN)
         parsed = parse_csr(csr)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Insert a cert with 90 days validity directly so cache threshold is met
         CertsDB(_db).record_issued_cert(IssuedCert(
             device_fp=device_fp,

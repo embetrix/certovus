@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from click.testing import CliRunner
@@ -47,7 +47,7 @@ def _provision(db: Database, fp: str = "aabbcc", cn: str = "dev-01.embetrix.work
 
 
 def _record_cert(db: Database, fp: str, csr_hash: str, days_left: int = 90) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     CertsDB(db).record_issued_cert(IssuedCert(
         device_fp=fp,
         cn="dev-01.embetrix.works",
@@ -76,7 +76,7 @@ class TestProvision:
 
     def test_token_is_64_hex_chars(self, runner, db_path):
         r = _run(runner, db_path, "provision", "--cn", "dev-01.embetrix.works")
-        token_line = [l for l in r.output.splitlines() if "Bearer token:" in l][0]
+        token_line = [ln for ln in r.output.splitlines() if "Bearer token:" in ln][0]
         token = token_line.split("Bearer token:")[1].strip()
         assert len(token) == 64
         assert all(c in "0123456789abcdef" for c in token)
@@ -85,7 +85,7 @@ class TestProvision:
         db = Database(db_path)
         db.connect()
         r = _run(runner, db_path, "provision", "--cn", "dev-01.embetrix.works")
-        token_line = [l for l in r.output.splitlines() if "Bearer token:" in l][0]
+        token_line = [ln for ln in r.output.splitlines() if "Bearer token:" in ln][0]
         token = token_line.split("Bearer token:")[1].strip()
         fp = hashlib.sha256(token.encode()).hexdigest()
         device = DevicesDB(db).get_by_fingerprint(fp)
@@ -114,8 +114,8 @@ class TestProvision:
     def test_two_tokens_are_different(self, runner, db_path):
         r1 = _run(runner, db_path, "provision", "--cn", "dev-01.embetrix.works")
         r2 = _run(runner, db_path, "provision", "--cn", "dev-02.embetrix.works")
-        token1 = [l for l in r1.output.splitlines() if "Bearer token:" in l][0].split()[-1]
-        token2 = [l for l in r2.output.splitlines() if "Bearer token:" in l][0].split()[-1]
+        token1 = [ln for ln in r1.output.splitlines() if "Bearer token:" in ln][0].split()[-1]
+        token2 = [ln for ln in r2.output.splitlines() if "Bearer token:" in ln][0].split()[-1]
         assert token1 != token2
 
 
@@ -316,5 +316,5 @@ class TestAudit:
         db.close()
         r = _run(runner, db_path, "audit", "--limit", "3")
         # 3 data rows + header + separator = 5 lines minimum, but just check count
-        data_lines = [l for l in r.output.splitlines() if "UTC" in l]
+        data_lines = [ln for ln in r.output.splitlines() if "UTC" in ln]
         assert len(data_lines) <= 3

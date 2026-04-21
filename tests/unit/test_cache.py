@@ -1,10 +1,10 @@
 """Unit tests for broker/cache.py."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from broker.cache import CertCache, EXPIRY_THRESHOLD
+from broker.cache import CertCache
 from broker.db import CertsDB, Database, DevicesDB, IssuedCert
 
 
@@ -32,7 +32,7 @@ def _provision(db: Database, fp: str = "aabbcc", cn: str = "dev-01") -> None:
 
 
 def _cert(db: Database, fp: str, csr_hash: str, days_left: float) -> IssuedCert:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cert = IssuedCert(
         device_fp=fp,
         cn="dev-01.embetrix.works",

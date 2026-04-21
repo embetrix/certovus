@@ -1,7 +1,6 @@
 """Unit tests for broker/rate_limit.py."""
 
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -40,7 +39,7 @@ def _provision(db: Database, fp: str = "aabbcc", cn: str = "dev-01") -> None:
 
 
 def _record_cert(db: Database, fp: str, csr_hash: str, days_left: float = 90) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     CertsDB(db).record_issued_cert(IssuedCert(
         device_fp=fp,
         cn="dev-01.embetrix.works",

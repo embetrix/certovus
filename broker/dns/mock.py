@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from broker.dns import DNSProvider, challenge_record_name
 from broker.errors import DNSError
@@ -62,7 +62,7 @@ class MockDNS(DNSProvider):
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
-    def _post(self, path: str, payload: dict) -> None:
+    def _post(self, path: str, payload: dict[str, str]) -> None:
         url = f"{self._url}{path}"
         try:
             resp = requests.post(url, json=payload, timeout=10)

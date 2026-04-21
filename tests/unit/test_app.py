@@ -3,24 +3,22 @@
 from __future__ import annotations
 
 import hashlib
-import json
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock
 
 import pytest
 from cryptography import x509 as crypto_x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
 
 from broker.app import create_app
-from broker.audit import AuditLog, Event
+from broker.audit import AuditLog
 from broker.cache import CertCache
 from broker.db import CertsDB, Database, DevicesDB
-from broker.errors import ACMEError, RateLimitError
+from broker.errors import ACMEError
 from broker.rate_limit import RateLimiter
-
 
 # ── Crypto helpers ────────────────────────────────────────────────────────────
 
@@ -44,7 +42,7 @@ def _make_csr(key: ec.EllipticCurvePrivateKey, cn: str, sans: list[str] | None =
 
 def _make_cert_pem(cn: str, days: int = 90) -> str:
     key = _make_key()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     name = crypto_x509.Name([crypto_x509.NameAttribute(NameOID.COMMON_NAME, cn)])
     cert = (
         crypto_x509.CertificateBuilder()
@@ -161,7 +159,7 @@ class TestHealth:
         assert resp.status_code == 200
 
     def test_returns_ok_status(self, client):
-        data = resp = client.get("/health")
+        resp = client.get("/health")
         assert resp.get_json() == {"status": "ok"}
 
     def test_no_auth_required(self, client):

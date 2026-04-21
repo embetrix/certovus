@@ -21,11 +21,14 @@ from __future__ import annotations
 import logging
 import os
 
+from flask import Flask
+
 from broker.acme_client import ACMEClient
 from broker.app import create_app
 from broker.audit import AuditLog
 from broker.cache import CertCache
 from broker.db import CertsDB, Database, DevicesDB
+from broker.dns import DNSProvider
 from broker.rate_limit import RateLimiter
 
 
@@ -37,7 +40,7 @@ def _int_env(key: str, default: int) -> int:
     return int(os.environ.get(key, default))
 
 
-def _build_dns_provider():
+def _build_dns_provider() -> DNSProvider:
     env = _env("CERTOVUS_ENV", "dev")
     if env == "dev":
         challtestsrv_url = os.environ.get("CHALLTESTSRV_URL")
@@ -53,7 +56,7 @@ def _build_dns_provider():
     )
 
 
-def _build_app():
+def _build_app() -> Flask:
     logging.basicConfig(
         level=_env("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",

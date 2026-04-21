@@ -14,9 +14,9 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+import cloudflare as cf_sdk
 import dns.exception
 import dns.resolver
-import cloudflare as cf_sdk
 
 from broker.dns import DNSProvider, challenge_record_name
 from broker.errors import DNSError
@@ -106,7 +106,7 @@ class CloudflareDNS(DNSProvider):
                 self._client.dns.records.list(
                     zone_id=self._zone_id,
                     type="TXT",
-                    name=name,
+                    name=name,  # type: ignore[arg-type]
                 )
             )
             for record in existing:

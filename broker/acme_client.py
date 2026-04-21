@@ -22,15 +22,14 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import josepy
-from acme import challenges
+from acme import challenges, messages
 from acme import client as acme_lib
 from acme import errors as acme_errors
-from acme import messages
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
@@ -67,7 +66,7 @@ class ACMEClient:
         self._account_key_path = Path(account_key_path)
         self._verify_ssl = verify_ssl
         self._order_timeout = order_timeout
-        self._acme: Optional[acme_lib.ClientV2] = None
+        self._acme: acme_lib.ClientV2 | None = None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -140,7 +139,7 @@ class ACMEClient:
         jwk = self._load_or_create_account_key()
         net = acme_lib.ClientNetwork(
             jwk,
-            alg=josepy.ES256,
+            alg=josepy.ES256,  # type: ignore[attr-defined]
             verify_ssl=self._verify_ssl,
             user_agent="certovus/0.1.0",
         )
@@ -161,7 +160,7 @@ class ACMEClient:
 
         return client
 
-    def _load_or_create_account_key(self) -> josepy.JWKEC:
+    def _load_or_create_account_key(self) -> Any:
         """Return the account JWK, creating the key file (0600) if it does not exist."""
         if self._account_key_path.exists():
             try:
@@ -173,7 +172,7 @@ class ACMEClient:
                         "delete it to generate a fresh P-256 key"
                     )
                 logger.debug("acme: loaded account key from %s", self._account_key_path)
-                return josepy.JWKEC(key=private_key)
+                return josepy.JWKEC(key=private_key)  # type: ignore[attr-defined]
             except (ValueError, TypeError) as exc:
                 raise ACMEError(
                     f"failed to load account key from {self._account_key_path}: {exc}"
@@ -190,7 +189,7 @@ class ACMEClient:
         self._account_key_path.write_bytes(pem)
         os.chmod(self._account_key_path, 0o600)
         logger.info("acme: generated new account key at %s", self._account_key_path)
-        return josepy.JWKEC(key=private_key)
+        return josepy.JWKEC(key=private_key)  # type: ignore[attr-defined]
 
 
 # ── Challenge helpers (module-level so they're independently testable) ────────
@@ -198,14 +197,14 @@ class ACMEClient:
 
 def _collect_dns01_challenges(
     order: messages.OrderResource,
-    account_key: josepy.JWK,
+    account_key: Any,
 ) -> list[tuple[str, object, object, str]]:
     """Return list of (domain, challenge_body, response, txt_value) for all authzrs.
 
     Skips authorizations that are already valid (ACME server may reuse them).
     Raises ACMEError if any pending authorization has no DNS-01 challenge.
     """
-    result = []
+    result: list[tuple[str, object, object, str]] = []
     for authzr in order.authorizations:
         if authzr.body.status == messages.STATUS_VALID:
             continue
@@ -260,7 +259,7 @@ def _answer_all(
 ) -> None:
     for _, challenge, response, _ in challbs:
         try:
-            acme.answer_challenge(challenge, response)
+            acme.answer_challenge(challenge, response)  # type: ignore[arg-type]
         except acme_errors.Error as exc:
             raise ACMEError(f"failed to answer ACME challenge: {exc}") from exc
 

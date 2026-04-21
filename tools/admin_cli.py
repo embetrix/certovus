@@ -18,14 +18,12 @@ import hashlib
 import json
 import os
 import secrets
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import click
 
 from broker.audit import AuditEntry, AuditLog, Event
 from broker.db import CertsDB, Database, DevicesDB
-
 
 # ── Shared options ─────────────────────────────────────────────────────────────
 
@@ -55,7 +53,7 @@ def _open_db(ctx: click.Context) -> Database:
 
 @cli.command()
 @click.option("--cn", required=True, help="Device common name (FQDN).")
-@click.option("--hostname", "hostnames", multiple=True, help="Allowed hostname (repeat for multiple). Defaults to --cn.")
+@click.option("--hostname", "hostnames", multiple=True, help="Allowed hostname (repeatable). Defaults to --cn.")
 @click.option("--label", default="", help="Human-readable label.")
 @click.option("--by", "provisioned_by", default="admin", show_default=True, help="Who is provisioning this device.")
 @click.pass_context
@@ -191,14 +189,14 @@ def certs(ctx: click.Context, fingerprint: str) -> None:
         click.echo("No certificates found.")
         return
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     fmt = "{:<16}  {:<30}  {:<28}  {}"
     click.echo(fmt.format("SERIAL", "CN", "NOT AFTER", "STATUS"))
     click.echo("-" * 100)
     for c in rows:
         not_after = datetime.fromisoformat(c.not_after)
         if not_after.tzinfo is None:
-            not_after = not_after.replace(tzinfo=timezone.utc)
+            not_after = not_after.replace(tzinfo=UTC)
         days_left = (not_after - now).days
         if days_left < 0:
             status = click.style("expired", fg="red")

@@ -17,17 +17,19 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cryptography.hazmat.primitives.serialization import Encoding as CryptoEncoding
 from cryptography.x509 import load_pem_x509_certificate
-from flask import Flask, g, jsonify, request
+from flask import Flask, Response, g, jsonify, request
 
+from broker.acme_client import ACMEClient
 from broker.audit import AuditEntry, AuditLog, Event
 from broker.cache import CertCache
-from broker.csr import CSRError, HostnameDeniedError, parse_csr, validate_hostnames
+from broker.csr import parse_csr, validate_hostnames
 from broker.db import CertsDB, DevicesDB, IssuedCert
-from broker.errors import ACMEError, RateLimitError
+from broker.dns import DNSProvider
+from broker.errors import ACMEError, CSRError, HostnameDeniedError, RateLimitError
 from broker.rate_limit import RateLimiter
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,7 @@ def _token_fingerprint(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def _err(code: str, message: str, status: int):
+def _err(code: str, message: str, status: int) -> tuple[Response, int]:
     return jsonify({"error": code, "message": message}), status
 
 
@@ -63,8 +65,8 @@ def _extract_leaf_cert_meta(fullchain_pem: str) -> tuple[str, str, str, str]:
 
 def create_app(
     *,
-    acme_client,
-    dns_provider,
+    acme_client: ACMEClient,
+    dns_provider: DNSProvider,
     rate_limiter: RateLimiter,
     cache: CertCache,
     audit: AuditLog,
@@ -75,16 +77,16 @@ def create_app(
     app = Flask(__name__)
 
     @app.before_request
-    def _assign_request_context():
+    def _assign_request_context() -> None:
         g.request_id = str(uuid.uuid4())
         g.source_ip = request.remote_addr or "unknown"
 
     @app.get("/health")
-    def health():
+    def health() -> Response:
         return jsonify({"status": "ok"})
 
     @app.post("/sign")
-    def sign():
+    def sign() -> Response | tuple[Response, int]:
         # ── Auth ──────────────────────────────────────────────────────────────
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
@@ -217,7 +219,7 @@ def create_app(
                 details={"reason": str(exc)},
             ))
             return _err("acme_error", str(exc), 502)
-        except Exception as exc:
+        except Exception:
             logger.exception("unexpected error during issuance for %s", device.cn)
             return _err("internal_error", "Internal server error", 500)
 
@@ -236,7 +238,7 @@ def create_app(
             serial=serial_hex,
             fingerprint=cert_fp,
             csr_hash=parsed.csr_hash,
-            issued_at=datetime.now(timezone.utc).isoformat(),
+            issued_at=datetime.now(UTC).isoformat(),
             not_before=not_before,
             not_after=not_after,
             cert_pem=fullchain_pem,

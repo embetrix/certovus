@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -10,7 +10,6 @@ from broker.dns import challenge_record_name
 from broker.dns.cloudflare import CloudflareDNS, _txt_value_visible
 from broker.dns.mock import MockDNS, _fqdn
 from broker.errors import DNSError
-
 
 # ── challenge_record_name helper ──────────────────────────────────────────────
 

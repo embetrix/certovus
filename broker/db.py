@@ -14,17 +14,17 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Generator, Optional
 
 _MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ── Dataclasses ───────────────────────────────────────────────────────────────
@@ -38,13 +38,13 @@ class Device:
     label: str
     provisioned_at: str
     provisioned_by: str
-    client_cert_pem: Optional[str] = None  # reserved; nullable
-    revoked_at: Optional[str] = None
-    revoked_by: Optional[str] = None
-    revoked_reason: Optional[str] = None
-    notes: Optional[str] = None
-    last_seen_at: Optional[str] = None
-    last_seen_ip: Optional[str] = None
+    client_cert_pem: str | None = None  # reserved; nullable
+    revoked_at: str | None = None
+    revoked_by: str | None = None
+    revoked_reason: str | None = None
+    notes: str | None = None
+    last_seen_at: str | None = None
+    last_seen_ip: str | None = None
 
     @property
     def is_active(self) -> bool:
@@ -63,8 +63,8 @@ class IssuedCert:
     not_before: str
     not_after: str
     cert_pem: str
-    acme_order_url: Optional[str] = None
-    id: Optional[int] = None
+    acme_order_url: str | None = None
+    id: int | None = None
 
 
 # ── Database connection manager ───────────────────────────────────────────────
@@ -79,7 +79,7 @@ class Database:
 
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
 
     def connect(self) -> None:
         self._conn = sqlite3.connect(
@@ -183,13 +183,13 @@ class DevicesDB:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def get_by_fingerprint(self, fingerprint: str) -> Optional[Device]:
+    def get_by_fingerprint(self, fingerprint: str) -> Device | None:
         row = self._db.conn.execute(
             "SELECT * FROM devices WHERE fingerprint = ?", (fingerprint,)
         ).fetchone()
         return _row_to_device(row) if row else None
 
-    def get_by_cn(self, cn: str) -> Optional[Device]:
+    def get_by_cn(self, cn: str) -> Device | None:
         row = self._db.conn.execute(
             "SELECT * FROM devices WHERE cn = ? ORDER BY provisioned_at DESC LIMIT 1",
             (cn,),
@@ -214,7 +214,7 @@ class DevicesDB:
         hostnames: list[str],
         label: str,
         provisioned_by: str,
-        notes: Optional[str] = None,
+        notes: str | None = None,
     ) -> None:
         """Register a new device. Raises sqlite3.IntegrityError on duplicate fingerprint or CN.
 
@@ -314,7 +314,7 @@ class CertsDB:
             row_id = cur.lastrowid  # type: ignore[assignment]
         return row_id
 
-    def get_by_csr_hash(self, device_fp: str, csr_hash: str) -> Optional[IssuedCert]:
+    def get_by_csr_hash(self, device_fp: str, csr_hash: str) -> IssuedCert | None:
         """Look up an existing issuance by CSR hash — entry point for the cache layer."""
         row = self._db.conn.execute(
             """
@@ -339,7 +339,7 @@ class CertsDB:
         ).fetchall()
         return [_row_to_cert(r) for r in rows]
 
-    def get_best_cert(self, device_fp: str) -> Optional[IssuedCert]:
+    def get_best_cert(self, device_fp: str) -> IssuedCert | None:
         """The valid cert with the most time remaining — used by the rate-limit bypass check."""
         row = self._db.conn.execute(
             """

@@ -13,7 +13,7 @@ Guards:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from broker.cache import CertCache
 from broker.db import CertsDB
@@ -62,7 +62,7 @@ class RateLimiter:
     def _check_global(self) -> None:
         if self._global_limit == 0:
             return
-        since = datetime.now(timezone.utc) - self._global_window
+        since = datetime.now(UTC) - self._global_window
         count = self._db.count_issued_since(since)
         if count >= self._global_limit:
             raise RateLimitError(
@@ -75,7 +75,7 @@ class RateLimiter:
             return
         if self._cache.is_expiring(device_fp):
             return
-        since = datetime.now(timezone.utc) - self._per_device_window
+        since = datetime.now(UTC) - self._per_device_window
         count = self._db.count_issued_since_for_device(device_fp, since)
         if count >= self._per_device_limit:
             raise RateLimitError(

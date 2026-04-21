@@ -7,8 +7,7 @@ The rate limiter uses is_expiring() to waive the per-device 24 h limit.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from broker.db import CertsDB, IssuedCert
 
@@ -18,16 +17,16 @@ EXPIRY_THRESHOLD = timedelta(days=30)
 def _days_remaining(cert: IssuedCert) -> float:
     not_after = datetime.fromisoformat(cert.not_after)
     if not_after.tzinfo is None:
-        not_after = not_after.replace(tzinfo=timezone.utc)
-    return (not_after - datetime.now(timezone.utc)).total_seconds() / 86400
+        not_after = not_after.replace(tzinfo=UTC)
+    return (not_after - datetime.now(UTC)).total_seconds() / 86400
 
 
 def _is_fresh(cert: IssuedCert) -> bool:
     """Return True if cert has strictly more than 30 days remaining."""
     not_after = datetime.fromisoformat(cert.not_after)
     if not_after.tzinfo is None:
-        not_after = not_after.replace(tzinfo=timezone.utc)
-    return not_after - datetime.now(timezone.utc) > EXPIRY_THRESHOLD
+        not_after = not_after.replace(tzinfo=UTC)
+    return not_after - datetime.now(UTC) > EXPIRY_THRESHOLD
 
 
 class CertCache:
@@ -36,7 +35,7 @@ class CertCache:
     def __init__(self, certs_db: CertsDB) -> None:
         self._db = certs_db
 
-    def get(self, device_fp: str, csr_hash: str) -> Optional[IssuedCert]:
+    def get(self, device_fp: str, csr_hash: str) -> IssuedCert | None:
         """Return the cached cert for this device+CSR if it has >30 days remaining.
 
         Returns None on cache miss or if the cached cert is expiring soon.
@@ -46,7 +45,7 @@ class CertCache:
             return None
         return cert if _is_fresh(cert) else None
 
-    def get_best(self, device_fp: str) -> Optional[IssuedCert]:
+    def get_best(self, device_fp: str) -> IssuedCert | None:
         """Return the cert with the longest remaining validity, or None if none exists."""
         return self._db.get_best_cert(device_fp)
 

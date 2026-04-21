@@ -26,9 +26,9 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Optional
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from broker.db import Database
 
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # ── Event taxonomy ────────────────────────────────────────────────────────────
 
 
-class Event(str, Enum):
+class Event(StrEnum):
     """Closed set of audit event types.  String values are stored in the DB."""
 
     # Device lifecycle
@@ -84,13 +84,13 @@ class AuditEntry:
     event:      Event
     actor:      str          # "device:<cn>" | "admin:<name>" | "system"
     outcome:    str          # "success" | "failure"
-    ts:         str          = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    device_fp:  Optional[str]              = None
-    device_cn:  Optional[str]              = None
-    source_ip:  Optional[str]              = None
-    user_agent: Optional[str]              = None
-    details:    Optional[dict[str, Any]]   = None
-    request_id: Optional[str]              = None
+    ts:         str          = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    device_fp:  str | None              = None
+    device_cn:  str | None              = None
+    source_ip:  str | None              = None
+    user_agent: str | None              = None
+    details:    dict[str, Any] | None   = None
+    request_id: str | None              = None
 
 
 # ── AuditLog ──────────────────────────────────────────────────────────────────
@@ -141,12 +141,12 @@ class AuditLog:
     def query(
         self,
         *,
-        device_fp:  Optional[str]      = None,
-        device_cn:  Optional[str]      = None,
-        event:      Optional[Event]    = None,
-        since:      Optional[datetime] = None,
-        until:      Optional[datetime] = None,
-        outcome:    Optional[str]      = None,
+        device_fp:  str | None      = None,
+        device_cn:  str | None      = None,
+        event:      Event | None    = None,
+        since:      datetime | None = None,
+        until:      datetime | None = None,
+        outcome:    str | None      = None,
         limit:      int                = 100,
     ) -> list[AuditEntry]:
         """Return audit rows matching the given filters, newest first.

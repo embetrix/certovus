@@ -5,14 +5,15 @@ All ACME network I/O and DNS provider calls are mocked — no real network neede
 
 from __future__ import annotations
 
-import os
 import stat
+from datetime import UTC
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 import josepy
 import pytest
-from acme import challenges, errors as acme_errors, messages
+from acme import challenges, messages
+from acme import errors as acme_errors
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
@@ -29,7 +30,6 @@ from broker.acme_client import (
     _wait_all_propagation,
 )
 from broker.errors import ACMEError
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -115,8 +115,8 @@ class TestAccountKey:
         assert jwk1.key.private_numbers() == jwk2.key.private_numbers()
 
     def test_non_ec_key_raises(self, client, key_path):
-        from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives.asymmetric import rsa
         rsa_key = rsa.generate_private_key(65537, 2048, default_backend())
         pem = rsa_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
         key_path.write_bytes(pem)
@@ -272,7 +272,7 @@ def _patched_client(client: ACMEClient, order: MagicMock):
 class TestIssue:
     def test_returns_fullchain_pem(self, client):
         order = _make_order("dev.example.com")
-        acme_mock = _patched_client(client, order)
+        _patched_client(client, order)
         provider = MagicMock()
         result = client.issue("-----BEGIN CERTIFICATE REQUEST-----\nfake\n-----END CERTIFICATE REQUEST-----", provider)
         assert result == order.fullchain_pem
@@ -348,13 +348,14 @@ class TestIssue:
 
 class TestRevoke:
     def _fake_cert_pem(self) -> str:
+        from datetime import datetime, timedelta
+
         from cryptography import x509
-        from cryptography.x509.oid import NameOID
         from cryptography.hazmat.primitives import hashes
-        from datetime import datetime, timedelta, timezone
+        from cryptography.x509.oid import NameOID
         key = ec.generate_private_key(ec.SECP256R1())
         subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test")])
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cert = (
             x509.CertificateBuilder()
             .subject_name(subject)

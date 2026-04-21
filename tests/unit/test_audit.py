@@ -1,6 +1,6 @@
 """Unit tests for broker/audit.py."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -122,9 +122,9 @@ class TestQuery:
     def _populate(self, db, audit):
         _provision(db, fingerprint="aa", cn="dev-01")
         _provision(db, fingerprint="bb", cn="dev-02")
-        audit.record(_entry(event=Event.AUTH_SUCCESS, outcome="success", device_fp="aa", device_cn="dev-01.embetrix.works"))
-        audit.record(_entry(event=Event.AUTH_REVOKED, outcome="failure", device_fp="bb", device_cn="dev-02.embetrix.works"))
-        audit.record(_entry(event=Event.SIGN_ISSUED, outcome="success", device_fp="aa", device_cn="dev-01.embetrix.works"))
+        audit.record(_entry(event=Event.AUTH_SUCCESS, outcome="success", device_fp="aa", device_cn="dev-01"))
+        audit.record(_entry(event=Event.AUTH_REVOKED, outcome="failure", device_fp="bb", device_cn="dev-02"))
+        audit.record(_entry(event=Event.SIGN_ISSUED, outcome="success", device_fp="aa", device_cn="dev-01"))
 
     def test_query_all(self, db, audit):
         self._populate(db, audit)
@@ -138,7 +138,7 @@ class TestQuery:
 
     def test_query_by_device_cn(self, db, audit):
         self._populate(db, audit)
-        rows = audit.query(device_cn="dev-02.embetrix.works")
+        rows = audit.query(device_cn="dev-02")
         assert len(rows) == 1
         assert rows[0].event is Event.AUTH_REVOKED
 
@@ -156,13 +156,13 @@ class TestQuery:
 
     def test_query_since(self, db, audit):
         self._populate(db, audit)
-        future = datetime.now(timezone.utc) + timedelta(hours=1)
+        future = datetime.now(UTC) + timedelta(hours=1)
         rows = audit.query(since=future)
         assert len(rows) == 0
 
     def test_query_until(self, db, audit):
         self._populate(db, audit)
-        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        past = datetime.now(UTC) - timedelta(hours=1)
         rows = audit.query(until=past)
         assert len(rows) == 0
 

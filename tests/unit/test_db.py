@@ -1,11 +1,11 @@
 """Unit tests for broker/db.py — in-memory SQLite, no mocks."""
 
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from broker.db import CertsDB, Database, Device, DevicesDB, IssuedCert
+from broker.db import CertsDB, Database, DevicesDB, IssuedCert
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def _sample_device(**overrides) -> dict:
 
 
 def _sample_cert(device_fp: str, **overrides) -> IssuedCert:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     base = dict(
         device_fp=device_fp,
         cn="dev-01.embetrix.works",
@@ -152,7 +152,7 @@ class TestCertsDB:
 
     def test_get_valid_certs_excludes_expired(self, devices, certs):
         devices.provision(**_sample_device())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired = _sample_cert(
             "aabbcc",
             csr_hash="old",
@@ -167,7 +167,7 @@ class TestCertsDB:
 
     def test_get_best_cert(self, devices, certs):
         devices.provision(**_sample_device())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         certs.record_issued_cert(_sample_cert("aabbcc", csr_hash="h1"))
         certs.record_issued_cert(
             _sample_cert(
@@ -184,7 +184,7 @@ class TestCertsDB:
         devices.provision(**_sample_device())
         certs.record_issued_cert(_sample_cert("aabbcc", csr_hash="h1"))
         certs.record_issued_cert(_sample_cert("aabbcc", csr_hash="h2"))
-        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        since = datetime.now(UTC) - timedelta(hours=1)
         assert certs.count_issued_since(since) == 2
 
     def test_count_issued_since_for_device(self, devices, certs):
@@ -192,7 +192,7 @@ class TestCertsDB:
         devices.provision(**_sample_device(fingerprint="dd", cn="dev-02.embetrix.works"))
         certs.record_issued_cert(_sample_cert("aabbcc", csr_hash="h1"))
         certs.record_issued_cert(_sample_cert("dd", csr_hash="h2"))
-        since = datetime.now(timezone.utc) - timedelta(hours=1)
+        since = datetime.now(UTC) - timedelta(hours=1)
         assert certs.count_issued_since_for_device("aabbcc", since) == 1
 
     def test_list_for_device(self, devices, certs):
