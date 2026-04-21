@@ -32,13 +32,13 @@ def _utcnow() -> str:
 
 @dataclass
 class Device:
-    fingerprint: str
+    fingerprint: str        # SHA-256(bearer_token) hex
     cn: str
     hostnames: list[str]
     label: str
-    client_cert_pem: str
     provisioned_at: str
     provisioned_by: str
+    client_cert_pem: Optional[str] = None  # reserved; nullable
     revoked_at: Optional[str] = None
     revoked_by: Optional[str] = None
     revoked_reason: Optional[str] = None
@@ -145,7 +145,7 @@ def _row_to_device(row: sqlite3.Row) -> Device:
         cn=row["cn"],
         hostnames=json.loads(row["hostnames"]),
         label=row["label"],
-        client_cert_pem=row["client_cert_pem"],
+        client_cert_pem=row["client_cert_pem"],  # may be None
         provisioned_at=row["provisioned_at"],
         provisioned_by=row["provisioned_by"],
         revoked_at=row["revoked_at"],
@@ -213,25 +213,26 @@ class DevicesDB:
         cn: str,
         hostnames: list[str],
         label: str,
-        client_cert_pem: str,
         provisioned_by: str,
         notes: Optional[str] = None,
     ) -> None:
-        """Register a new device. Raises sqlite3.IntegrityError on duplicate fingerprint or CN."""
+        """Register a new device. Raises sqlite3.IntegrityError on duplicate fingerprint or CN.
+
+        fingerprint must be SHA-256(bearer_token) hex, computed by the caller.
+        """
         with self._db.transaction():
             self._db.conn.execute(
                 """
                 INSERT INTO devices
-                    (fingerprint, cn, hostnames, label, client_cert_pem,
+                    (fingerprint, cn, hostnames, label,
                      provisioned_at, provisioned_by, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     fingerprint,
                     cn,
                     json.dumps(hostnames),
                     label,
-                    client_cert_pem,
                     _utcnow(),
                     provisioned_by,
                     notes,

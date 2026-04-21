@@ -3,13 +3,15 @@
 -- Run via the migrations runner in broker/db.py — never execute manually.
 
 -- ── devices ───────────────────────────────────────────────────────────────────
--- One row per provisioned device, keyed by the SHA-256 of its client cert DER.
+-- One row per provisioned device, keyed by SHA-256 of the device's bearer token.
+-- Authentication: device sends Authorization: Bearer <token>; broker computes
+-- SHA-256 and looks up this column.  The raw token is never stored.
 CREATE TABLE IF NOT EXISTS devices (
-    fingerprint     TEXT PRIMARY KEY,               -- SHA-256 of DER-encoded client cert (hex)
+    fingerprint     TEXT PRIMARY KEY,               -- SHA-256(bearer_token) hex
     cn              TEXT NOT NULL,
     hostnames       TEXT NOT NULL DEFAULT '[]',     -- JSON array of exact-match FQDNs
     label           TEXT NOT NULL DEFAULT '',
-    client_cert_pem TEXT NOT NULL,
+    client_cert_pem TEXT,                           -- reserved for future mTLS upgrade; nullable
     provisioned_at  TEXT NOT NULL,
     provisioned_by  TEXT NOT NULL,
     revoked_at      TEXT,

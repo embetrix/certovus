@@ -29,7 +29,6 @@ def _provision(db: Database, fingerprint: str = "aabbcc", cn: str = "dev-01") ->
         cn=f"{cn}.embetrix.works",
         hostnames=[f"{cn}.embetrix.works"],
         label=cn,
-        client_cert_pem="-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----",
         provisioned_by="test",
     )
 
@@ -53,6 +52,8 @@ def _entry(**overrides) -> AuditEntry:
 class TestEvent:
     def test_string_values_match_spec(self):
         assert Event.AUTH_SUCCESS.value == "auth.success"
+        assert Event.AUTH_MISSING_TOKEN.value == "auth.missing_token"
+        assert Event.AUTH_UNKNOWN_TOKEN.value == "auth.unknown_token"
         assert Event.SIGN_ISSUED.value == "sign.issued"
         assert Event.DEVICE_REVOKED.value == "device.revoked"
         assert Event.ADMIN_LOGIN_FAILED.value == "admin.login_failed"

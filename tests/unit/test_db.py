@@ -32,7 +32,6 @@ def _sample_device(**overrides) -> dict:
         cn="dev-01.embetrix.works",
         hostnames=["dev-01.embetrix.works"],
         label="Test device",
-        client_cert_pem="-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----",
         provisioned_by="admin",
     )
     return {**base, **overrides}

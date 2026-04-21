@@ -48,10 +48,10 @@ class Event(str, Enum):
     DEVICE_UPDATED     = "device.updated"
 
     # Authentication
-    AUTH_SUCCESS        = "auth.success"
-    AUTH_UNKNOWN_FP     = "auth.unknown_fp"
-    AUTH_REVOKED        = "auth.revoked"
-    AUTH_NO_CLIENT_CERT = "auth.no_client_cert"
+    AUTH_SUCCESS       = "auth.success"
+    AUTH_UNKNOWN_TOKEN = "auth.unknown_token"   # token hash not in DB
+    AUTH_MISSING_TOKEN = "auth.missing_token"   # no Authorization header
+    AUTH_REVOKED       = "auth.revoked"
 
     # Certificate issuance
     SIGN_REQUESTED      = "sign.requested"
